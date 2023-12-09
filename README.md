@@ -1,20 +1,17 @@
-# Child Workflows
+1 passo: instalar o server temporal
+https://learn.temporal.io/getting_started/typescript/dev_environment/
 
-This sample shows how to use [Child Workflows](https://docs.temporal.io/dev-guide/typescript/features#child-workflows):
+2 passo: Configurar localmente o ambiente para Typescript Project
+https://learn.temporal.io/getting_started/typescript/dev_environment/
 
-[`src/workflows.ts`](./src/workflows.ts)
+3 passo: criar uma conta no temporal.io
 
-### Running this sample
+4 passo: rodar o servidor e acessar interface grafica local
+http://localhost:8233/namespaces/default/workflows
 
-1. `temporal server start-dev` to start [Temporal Server](https://github.com/temporalio/cli/#installation).
-2. `npm install` to install dependencies.
-3. `npm run start.watch` to start the Worker.
-4. In another shell, `npm run workflow` to run the Workflow.
 
-The Workflow should return:
 
-```
-I am a child named Alice
-I am a child named Bob
-I am a child named Charlie
-```
+obs.:
+seguir o guia: https://docs.temporal.io/
+exemplos typescript: https://github.com/temporalio/samples-typescript
+sdk developer Typescript doc: https://docs.temporal.io/dev-guide/typescript
