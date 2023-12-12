@@ -1,56 +1,59 @@
 import express from 'express';
 import { WorkflowClient } from '@temporalio/client';
-import * as crypto from 'crypto';
-import { Request, Response } from 'express';
-import bodyParser from 'body-parser';
-import * as wf from '@temporalio/workflow';
-
-
-const generateKeyPair = () => {
-  const keyPair = crypto.generateKeyPairSync('rsa', {
-    modulusLength: 4096,
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem'},
-  });
-
-  return keyPair;
-}
-
-async function createWorkflowSignature (payload: any): Promise<string> {
-  const sign = crypto.createSign("SHA256");
-  sign.update(payload);
-  sign.end();
-
-  const signature = sign.sign(privateKey, "base64");
-  console.log(signature)
-  return signature;
-}
-
-const client = new WorkflowClient();
-const { publicKey, privateKey} = generateKeyPair()
+import { messageWorkflowHandler, getMessageQuery } from './workflows';
+import { bodySchema } from './schemas';
 
 const app = express();
 
-app.use(bodyParser.json())
+app.use(express.json());
 
-app.get('/:workflowId', async (req: Request, res: Response) => {
-  const {workflowId} = req.params;
-  const handler = client.getHandle(workflowId);
+const client = new WorkflowClient();
+const taskQueue = 'message';
 
-  handler.query('getMessage')
-  .then(result => res.json({ result }))
-  .catch(err => res.status(500).json({ message: err.message }));
-});
+app.post('/', function (req: express.Request, res: express.Response) {
+  let body: any;
 
-app.post('/', async (req: Request, res: Response) => {
-  const { id, message } = req.body;
+  try {
+    body = bodySchema.validateSync(req.body);
+  } catch (e) {
+    const errors = e as Error;
+    res.status(400).json({ errors: errors.message });
+    return;
+  }
 
-  client.start<any>(createWorkflowSignature, {
-    workflowId: id.toString(),
-    taskQueue: id.toString(),
+  const { id, message } = body;
+
+  const workflowId = id;
+  const opts = {
+    taskQueue,
+    workflowId,
     args: [message],
-  }).then(() => res.json({ id }));
+  } as any;
+
+  client
+    .start(messageWorkflowHandler, opts)
+    .then(() => res.json({ workflowId }))
+    .catch((e) => res.json({ erros: (e as Error).message }));
 });
 
-app.listen(3000);
-console.log('Listening on port 3000');
+app.get(`/:workflowId`, async function (req, res) {
+  const { workflowId } = req.params;
+
+  const handle = client.getHandle(workflowId);
+  const wfDescription = await handle.describe();
+
+  if (wfDescription.status.name === 'RUNNING') {
+    res.json(wfDescription.status);
+  } else {
+    handle
+      .query(getMessageQuery)
+      .then((result) => res.json({ result }))
+      .catch((err) => res.status(500).json({ message: err.message }));
+  }
+});
+
+const port = 3000;
+
+app.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
