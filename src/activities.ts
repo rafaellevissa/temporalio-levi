@@ -19,7 +19,7 @@ export async function signMessage(message: string): Promise<void> {
 
     const signature = sign.sign(privateKey, 'base64');
 
-    await client.complete(taskToken, signature);
+    await client.complete(taskToken, { signature, message });
   } catch (e) {
     throw new CompleteAsyncError();
   }
